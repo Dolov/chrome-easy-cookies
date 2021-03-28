@@ -10,19 +10,124 @@
 <style>
 	#container {
 		width: 360px;
-		min-height: 100px;
 	}
 
-	.create-input, .item-input {
-		margin-right: 12px;
+	.ant-tag {
+		position: relative;
+		box-sizing: border-box;
+    color: rgba(0,0,0,.85);
+    font-size: 14px;
+    font-variant: tabular-nums;
+    line-height: 1.5715;
+    list-style: none;
+    -webkit-font-feature-settings: "tnum";
+    font-feature-settings: "tnum";
+    display: inline-block;
+    height: auto;
+    margin: 0 8px 4px 0;
+    padding: 0 7px;
+    font-size: 12px;
+    line-height: 20px;
+    white-space: nowrap;
+    background: #fafafa;
+    border: 1px solid #d9d9d9;
+    border-radius: 2px;
+    opacity: 1;
+    -webkit-transition: all .3s;
+    transition: all .3s;
+		cursor: pointer;
 	}
 
-	.cookie-value {
-		background-color: aqua;
-		margin-right: 3px;
-		padding: 0 3px;
-		border: 1px solid antiquewhite;
-		border-radius: 2px;
+	.ant-input {
+		height: 22px;
+		webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    margin: 0;
+    font-variant: tabular-nums;
+    list-style: none;
+    -webkit-font-feature-settings: "tnum";
+    font-feature-settings: "tnum";
+    position: relative;
+    display: inline-block;
+    width: 100%;
+    min-width: 0;
+    padding: 0px 11px;
+    color: rgba(0,0,0,.85);
+    font-size: 14px;
+    line-height: 1.5715;
+    background-color: #fff;
+    background-image: none;
+    border: 1px solid #d9d9d9;
+    border-radius: 2px;
+    -webkit-transition: all .3s;
+    transition: all .3s;
+	}
+
+	.ant-input:focus {
+		border-color: #40a9ff;
+    border-right-width: 1px!important;
+    outline: 0;
+    -webkit-box-shadow: 0 0 0 2px rgb(24 144 255 / 20%);
+    box-shadow: 0 0 0 2px rgb(24 144 255 / 20%);
+	}
+
+	.ant-input:hover {
+		border-color: #40a9ff;
+    border-right-width: 1px!important;
+	}
+
+	.cookie-name, .add-new-cookie {
+		background-color: rgb(59, 89, 153);
+		color: #fff;
+		border-color: transparent;
+		width: 100%;
+		margin-top: 4px;
+		cursor: default;
+	}
+
+	.add-new-cookie {
+		cursor: pointer;
+	}
+
+	.cookie-name .delete {
+		color: #fff;
+		position: absolute;
+		right: 12px;
+		cursor: pointer;
+		display: none;
+	}
+
+	.cookie-name:hover .delete {
+		display: inline-block;
+		color: #fff;
+	}
+
+	.checked.ant-tag {
+		background-color: rgb(85, 172, 238);
+		color: #fff;
+		border-color: transparent;
+	}
+
+	.checked.ant-tag .delete {
+		color: #fff;
+	}
+
+	.new-tag {
+		background: #fff;
+    border-style: dashed;
+	}
+
+	.add-cookie-value {
+		width: 100px;
+		transform: translateY(1px);
+	}
+
+	.delete {
+		color: rgba(0,0,0,.45)
+	}
+
+	.delete:hover {
+		color: rgba(0,0,0,.65)
 	}
 </style>
 
@@ -30,34 +135,52 @@
 	<div id="container">
 		<div class="create-wrapper">
 			<input
-				ref="inputRef"
+				v-if="createNewCookieInputVisible"
+				ref="createNewCookieinputRef"
 				type="text"
-				class="create-input"
-				v-model="cookieName"
+				class="create-input ant-input"
 				@keyup.enter="createCookieName"
 				placeholder="请输入 cookie 名称"
 			>
-			<button class="create-btn" @click="createCookieName">
-				{{createBtnText}}
-			</button>
+			<span
+				v-if="!createNewCookieInputVisible"
+				class="ant-tag add-new-cookie"
+				@click="preCreateCookieName"
+			>
+				+ 添加新的 cookie 名称
+			</span>
 		</div>
 
 		<div class="cookie-list">
 			<div v-for="name in Object.keys(cookies)">
-				<div>{{name}}</div>
-				<div>
-					<span class="cookie-value" v-for="item in cookies[name]">
-						{{item}}
-					</span>
+				<div class="cookie-name ant-tag">
+					{{name}}
+					<span class="delete" @click.stop="deleteCookieName(name)">x</span>
 				</div>
-				<input
-					autofocus
-					:ref=" 'inputRef-' + name"
-					type="text"
-					class="item-input"
-					@keyup.enter="addCookieValue(name)"
-				>
-				<button @click="addCookieValue(name)">添加</button>
+				<div>
+					<span 
+						:class="{checked: checked(name, item), 'ant-tag': true}"
+						v-for="item in cookies[name]"
+						@click="onCookieValueChange(name, item)"
+					>
+						{{item}}
+						<span class="delete" @click.stop="deleteCookieValue(name, item)">x</span>
+					</span>
+					<span
+						v-if="name !== addValueInputName"
+						class="ant-tag new-tag"
+						@click="toggleInputVisible(name)"
+					>
+						+ new value
+					</span>
+					<input
+						v-if="name === addValueInputName"
+						:ref=" 'inputRef-' + name"
+						type="text"
+						class="ant-input add-cookie-value"
+						@keyup.enter="addCookieValue(name)"
+					/>
+				</div>
 			</div>
 		</div>
 	</div>
