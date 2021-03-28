@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+</head>
+<style>
+	#container {
+		width: 360px;
+		min-height: 100px;
+	}
+
+	.create-input, .item-input {
+		margin-right: 12px;
+	}
+
+	.cookie-value {
+		background-color: aqua;
+		margin-right: 3px;
+		padding: 0 3px;
+		border: 1px solid antiquewhite;
+		border-radius: 2px;
+	}
+</style>
+
+<body>
+	<div id="container">
+		<div class="create-wrapper">
+			<input
+				ref="inputRef"
+				type="text"
+				class="create-input"
+				v-model="cookieName"
+				@keyup.enter="createCookieName"
+				placeholder="请输入 cookie 名称"
+			>
+			<button class="create-btn" @click="createCookieName">
+				{{createBtnText}}
+			</button>
+		</div>
+
+		<div class="cookie-list">
+			<div v-for="name in Object.keys(cookies)">
+				<div>{{name}}</div>
+				<div>
+					<span class="cookie-value" v-for="item in cookies[name]">
+						{{item}}
+					</span>
+				</div>
+				<input
+					autofocus
+					:ref=" 'inputRef-' + name"
+					type="text"
+					class="item-input"
+					@keyup.enter="addCookieValue(name)"
+				>
+				<button @click="addCookieValue(name)">添加</button>
+			</div>
+		</div>
+	</div>
+</body>
+<script src="./js/vue.js"></script>
+<script src="./js/popup.js"></script>
+
+</html>
