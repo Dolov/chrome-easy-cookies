@@ -19,29 +19,45 @@ const ReviewApp = {
     
   },
   methods: {
-    /** 初始化，读取缓存的数据添加至应用 */
+    /** 初始化，读取本地存储的数据添加至应用 */
     async init() {
       const cookies = await this.getCookiesInfo()
       this.cookies = cookies
       await this.getCurrentCookiesValue()
+      await this.setCurrentValueToList()
     },
+    /** 获取当前页面下对应的 cookie 值 */
     async getCurrentCookiesValue() {
       const cookiesValue = {}
       const cookiesName = Object.keys(this.cookies)
       for (const name of cookiesName) {
         const cookie = await this.getCookie(name)
-        cookiesValue[name] = cookie?.value
+        if (cookie?.value) {
+          cookiesValue[name] = cookie?.value
+        }
       }
       this.currentCookiesValue = cookiesValue
     },
-
+    /** 显示当前值 */
+    async setCurrentValueToList() {
+      const cookiesName = Object.keys(this.currentCookiesValue)
+      for (const name of cookiesName) {
+        const list = this.cookies[name] || []
+        const currentValue = this.currentCookiesValue[name]
+        if (!list.includes(currentValue)) {
+          await this.storeCookies(name, currentValue)
+          await this.init()
+        }
+      }
+    },
     /** 切换 cookie 值 */
     async onCookieValueChange(cookieName, cookieValue) {
       await this.setCookie(cookieName, cookieValue)
       await this.getCurrentCookiesValue()
     },
 
-    preCreateCookieName() {
+    /** 显示创建新 cookie 的 input */
+    setCreateCookieInputVisible() {
       this.createNewCookieInputVisible = true
       setTimeout(() => {
         this.$refs.createNewCookieinputRef.focus()
@@ -94,7 +110,7 @@ const ReviewApp = {
       const { hostname } = await this.getHostname()
       const cookies = await this.getCookiesInfo()
       let currentList = cookies[cookieName] || []
-      if (cookieValue) {
+      if (cookieValue && !currentList.includes(cookieValue)) {
         currentList.unshift(cookieValue)
       }
 
@@ -124,6 +140,14 @@ const ReviewApp = {
 
     async setCookie(cookieName, cookieValue) {
       const { origin } = await this.getHostname()
+      if (!cookieValue) {
+        return new Promise(resolve => {
+          chrome.cookies.remove({
+            url: origin,
+            name: cookieName,
+          }, resolve) 
+        })
+      }
       return new Promise(resolve => {
         chrome.cookies.set({
           url: origin,
@@ -150,15 +174,15 @@ const ReviewApp = {
     },
     async deleteCookieValue(cookieName, cookieValue) {
       await this.storeCookies(cookieName, cookieValue, 'delete-value')
-      await this.init()
       if (this.currentCookiesValue[cookieName] === cookieValue) {
         await this.setCookie(cookieName, null)
       }
+      await this.init()
     },
     async deleteCookieName(cookieName) {
       await this.storeCookies(cookieName, null, 'delete-name')
-      await this.init()
       await this.setCookie(cookieName, null)
+      await this.init()
     }
   },
   async created() {
