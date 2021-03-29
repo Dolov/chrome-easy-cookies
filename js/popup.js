@@ -1,4 +1,26 @@
 
+
+// 获取当前选项卡ID
+function getCurrentTabId(callback)
+{
+	chrome.tabs.query({active: true, currentWindow: true}, function(tabs)
+	{
+		if(callback) callback(tabs.length ? tabs[0].id: null);
+	});
+}
+
+// 向content-script主动发送消息
+function sendMessageToContentScript(message, callback)
+{
+	getCurrentTabId((tabId) =>
+	{
+		chrome.tabs.sendMessage(tabId, message, function(response)
+		{
+			if(callback) callback(response);
+		});
+	});
+}
+
 const ReviewApp = {
   data() {
     return {
@@ -32,8 +54,8 @@ const ReviewApp = {
       const cookiesName = Object.keys(this.cookies)
       for (const name of cookiesName) {
         const cookie = await this.getCookie(name)
-        if (cookie?.value) {
-          cookiesValue[name] = cookie?.value
+        if (cookie) {
+          cookiesValue[name] = cookie
         }
       }
       this.currentCookiesValue = cookiesValue
@@ -130,37 +152,38 @@ const ReviewApp = {
     },
 
     async getCookie(cookieName) {
-      const { origin, hostname } = await this.getHostname()
       return new Promise(resolve => {
-        chrome.cookies.get({url: origin, "name": cookieName}, (cookie) => {
-          resolve(cookie)
-        })
+        sendMessageToContentScript({
+          type: 'getCookie',
+          payload: {
+            name: cookieName,
+          }
+        }, resolve)
       })
     },
 
     async setCookie(cookieName, cookieValue) {
-      const { origin } = await this.getHostname()
-      if (!cookieValue) {
-        return new Promise(resolve => {
-          chrome.cookies.remove({
-            url: origin,
-            name: cookieName,
-          }, resolve) 
-        })
+      const payload = {
+        name: cookieName,
+        value: cookieValue,
       }
+
+      if (!cookieValue) {
+        payload.exdays = -1
+      }
+
       return new Promise(resolve => {
-        chrome.cookies.set({
-          url: origin,
-          name: cookieName,
-          value: cookieValue
-        }, resolve) 
+        sendMessageToContentScript({
+          type: 'setCookie',
+          payload
+        }, resolve)
       })
     },
 
     /** 获取当前激活 tab 的 url */
     async getHostname() {
       return new Promise(resolve => {
-        chrome.tabs.query({active: true}, (tabs) => {
+        chrome.tabs.query({active: true, currentWindow: true}, (tabs) => {
           const { hostname, origin } = new URL(tabs[0].url)
           resolve({
             origin,
@@ -175,14 +198,17 @@ const ReviewApp = {
     async deleteCookieValue(cookieName, cookieValue) {
       await this.storeCookies(cookieName, cookieValue, 'delete-value')
       if (this.currentCookiesValue[cookieName] === cookieValue) {
-        await this.setCookie(cookieName, null)
+        await this.setCookie(cookieName)
       }
       await this.init()
     },
     async deleteCookieName(cookieName) {
       await this.storeCookies(cookieName, null, 'delete-name')
-      await this.setCookie(cookieName, null)
+      await this.setCookie(cookieName)
       await this.init()
+    },
+    reload() {
+      chrome.tabs.reload()
     }
   },
   async created() {
