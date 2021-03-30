@@ -74,7 +74,11 @@ const ReviewApp = {
     },
     /** 切换 cookie 值 */
     async onCookieValueChange(cookieName, cookieValue) {
-      await this.setCookie(cookieName, cookieValue)
+      if (this.currentCookiesValue[cookieName] === cookieValue) {
+        await this.setCookie(cookieName, null)
+      } else {
+        await this.setCookie(cookieName, cookieValue)
+      }
       await this.getCurrentCookiesValue()
     },
 
