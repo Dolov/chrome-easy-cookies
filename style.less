@@ -9,14 +9,49 @@ body {
   background: white;
 }
 
-.container {
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mt-16 {
   margin-top: 16px;
+}
+
+.show-all-container {
+  margin-top: 12px;
+  background: rgba(230, 244, 255, 0.5);
+  padding: 8px;
+  .cookie-item {
+    overflow: hidden;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+  }
+  .show-all-text {
+    text-decoration: underline;
+    cursor: pointer;
+    color: #91caff;
+    &:hover {
+      color: #1890ff;
+    }
+  }
+  .cookie-item:last-child {
+    margin-bottom: 0px;
+  }
+}
+
+.container {
+  .mt-16;
   width: 400px;
+  max-height: 90vh;
   header {
     padding: 12px 12px;
     border-bottom: 1px solid #e9eeef;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     .name {
       font-weight: bold;
       font-size: 14px;
@@ -30,7 +65,7 @@ body {
   .main {
     padding: 12px;
     > div {
-      padding: 12px 12px;
+      padding: 0 12px 12px;
       border: 1px dashed #d8dfe0;
       min-height: 200px;
       background-position: center;

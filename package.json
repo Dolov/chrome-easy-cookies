@@ -1,8 +1,8 @@
 {
   "name": "easy-cookies",
   "displayName": "easy-cookies",
-  "version": "0.0.1",
-  "description": "Manage current page cookies",
+  "version": "2.0.0",
+  "description": "Manage Page Cookies",
   "author": "shisongyan",
   "scripts": {
     "dev": "plasmo dev",
@@ -29,6 +29,7 @@
     "typescript": "5.1.6"
   },
   "manifest": {
+    "homepage_url": "https://github.com/Dolov/chrome-easy-cookies",
     "commands": {
       "helloworld": {
         "suggested_key": {

@@ -1,37 +1,81 @@
 import React from "react"
-import jsCookies from 'js-cookie'
-import { Input, Divider, Tag, message } from 'antd'
+import { Input, Divider, Tag, message, Checkbox } from 'antd'
 import { useStorage } from "@plasmohq/storage/hook"
 import empty from "data-base64:~assets/empty.svg"
 import cookie from "data-base64:~assets/cookie.png"
+import disabled from "data-base64:~assets/disabled.svg"
 import TagGroup from './components/TagGroup'
+import { i18n, sendMessage } from './utils'
 import './style.less'
 
-/** 默认 tag 颜色 */
-const DEFAULT_COLOR = "#3b5999"
+/** COOKIE 名称的默认颜色 */
+const DEFAULT_TAG_COLOR = "#3b5999"
 
+/** 容器的默认背景色 */
+const DEFAULT_BACKGROUND = "#f6f9fa"
+
+const CONTAINER_CLASS_NAME = "container"
+
+/** 展示所有 cookie */
+const ShowAll: React.FC<{
+  cookies,
+  visible,
+}> = props => {
+  const { cookies, visible } = props
+
+  if (!visible) return null
+  return (
+    <div className="show-all-container">
+      {Object.keys(cookies).map(name => {
+        return (
+          <div className="cookie-item">
+            <Tag bordered={false}>{name}</Tag>
+            <Tag color="success" bordered={false}>{cookies[name]}</Tag>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+/** 获取到 hostname 后再然后组件内容 */
 const HostnameContainer: React.FC<{
   children: (hostname: string) => React.ReactNode
 }> = props => {
   const { children } = props
 
-  const [hostname, setHostname] = React.useState('')
+  const [hostname, setHostname] = React.useState<string>(null)
 
   React.useEffect(() => {
-    chrome.tabs.query({active: true, currentWindow: true}, tabs => {
+    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
       const currentUrl = tabs[0].url
-      try {
-        const { hostname } = new URL(currentUrl) || {}
+      if (
+        !currentUrl ||
+        currentUrl.startsWith("chrome://") ||
+        currentUrl.startsWith("chrome-extension://")
+      ) {
+        setHostname("")
+      } else {
+        const { hostname } = new URL(currentUrl)
         setHostname(hostname)
-      } catch (error) {
-        
       }
     });
   }, [])
 
-  if (!hostname) {
+  if (hostname === null) {
     return (
-      <h1>loading</h1>  
+      <div className="mt-16 flex-center" style={{ padding: 12, whiteSpace: "nowrap", fontWeight: "bold" }}>
+        <span>{i18n.init}</span>
+      </div>
+    )
+  }
+
+  if (hostname === "") {
+    return (
+      <div className="mt-16 flex-center" style={{ padding: 12, whiteSpace: "nowrap", fontWeight: "bold" }}>
+        <img style={{ width: 24, height: 24, marginRight: 6 }} src={disabled} />
+        <span>{i18n.disabled} Cookie</span>
+      </div>
     )
   }
   return children(hostname)
@@ -40,17 +84,23 @@ const HostnameContainer: React.FC<{
 
 const Popup = props => {
   const { hostname } = props
+  const [visible, setVisible] = React.useState(false)
   const [cookies, setCookies] = React.useState([])
   const [storageData = {}, setStorageData] = useStorage(hostname)
   const [cookieName, setCookieName] = React.useState("")
 
-  /** 获取并存储当前页面的 cookie 信息 */
-  const getCurrentPageCookies = () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, function(tabs) {
-      chrome.tabs.sendMessage(tabs[0].id, { type: "COOKIES" }, (cookies) => {
-        setCookies(cookies)
-      });
-    });
+  /**
+   * 获取并存储当前页面的 cookie 信息
+   * 由于 chrome.cookies.getAll api 获取的数据不完整，所以通过 content-scripts 获取
+   */
+  const getCurrentPageCookies = async () => {
+    const cookies = await sendMessage({ type: "GET_ALL" })
+    setCookies(cookies)
+  }
+
+  const deleteBrowserCookie = async (cookieName: string) => {
+    const cookies = await sendMessage({ type: "DELETE", data: cookieName })
+    setCookies(cookies)
   }
 
   React.useEffect(() => {
@@ -61,7 +111,7 @@ const Popup = props => {
   const handleCreateCookieName = () => {
     if (!cookieName) return
     if (storageData[cookieName]) {
-      message.error(`${cookieName} - 已存在`)
+      message.error(`${cookieName} - ${i18n.existsMessage}`)
       return
     }
     const newData = {
@@ -70,8 +120,8 @@ const Popup = props => {
         list: []
       }
     }
-    setStorageData(newData)
     setCookieName("")
+    setStorageData(newData)
   }
 
   /** 删除 cookie */
@@ -81,6 +131,7 @@ const Popup = props => {
     }
     delete newData[name]
     setStorageData(newData)
+    deleteBrowserCookie(name)
   }
 
   /** 新增 cookie 值 */
@@ -97,11 +148,8 @@ const Popup = props => {
 
   /** 删除 cookie 值 */
   const handleDeleteCookieValue = (cookieName: string, deleteValue: string) => {
+    deleteBrowserCookie(cookieName)
     const newTags = storageData[cookieName].list.filter(tag => tag !== deleteValue);
-    const currentValue = jsCookies.get(cookieName)
-    if (currentValue === deleteValue) {
-      jsCookies.remove(cookieName)
-    }
     setStorageData({
       ...storageData,
       [cookieName]: {
@@ -112,25 +160,20 @@ const Popup = props => {
   }
 
   /** 切换 cookie */
-  const handleCookieValueChange = (cookieName: string, nextValue: string) => {
-    chrome.tabs.query({ active: true, currentWindow: true }, tabs => {
-      const cookieDetails = {
-        url: tabs[0].url,
+  const handleCookieValueChange = async (cookieName: string, nextValue: string) => {
+    const cookies = await sendMessage({
+      type: "CREATE",
+      data: {
         name: cookieName,
         value: nextValue,
-        path: "/",
-        expirationDate: new Date().getTime() + 10000
-      };
-      chrome.cookies.set(cookieDetails, cookie => {
-        console.log('cookie: ', cookie);
-        getCurrentPageCookies()
-      });
-    });
+      }
+    })
+    setCookies(cookies)
   }
 
   const noData = Object.keys(storageData).length === 0
   const style: React.CSSProperties = {
-    backgroundColor: "#f6f9fa",
+    backgroundColor: DEFAULT_BACKGROUND,
   }
 
   if (noData) {
@@ -138,27 +181,37 @@ const Popup = props => {
   }
 
   return (
-    <div className="container">
+    <div className={CONTAINER_CLASS_NAME}>
       <header>
-        <img src={cookie} alt="" />
-        <span className="name">Cookie 管理器</span>
+        <div className="flex-center">
+          <img src={cookie} />
+          <span className="name">Cookie {i18n.title}</span>
+        </div>
+        <Checkbox checked={visible} onChange={e => setVisible(e.target.checked)}>
+          {i18n.showAll}
+        </Checkbox>
       </header>
       <div className="main">
         <div style={style}>
           <div className="list">
+            <ShowAll visible={visible} cookies={cookies} />
             {Object.keys(storageData).map(name => {
               const value = cookies[name]
               const list = storageData[name].list || []
               return (
                 <div key={name} style={{ marginBottom: 16 }}>
                   <Divider orientation="left" orientationMargin="0">
-                    <Tag closable color={DEFAULT_COLOR} onClose={() => handleDeleteCookieName(name)}>
+                    <Tag
+                      closable
+                      color={DEFAULT_TAG_COLOR}
+                      onClose={() => handleDeleteCookieName(name)}
+                    >
                       {name}
                     </Tag>
                   </Divider>
                   <TagGroup
                     name={name}
-                    data={list} 
+                    data={list}
                     value={value}
                     onCreate={handleCreateCookieValue}
                     onDelete={handleDeleteCookieValue}
@@ -172,7 +225,7 @@ const Popup = props => {
             autoFocus
             value={cookieName}
             onChange={e => setCookieName(e.target.value)}
-            placeholder='输入新的 cookie 名称，然后回车'
+            placeholder={i18n.placeholder}
             onPressEnter={handleCreateCookieName}
           />
         </div>
@@ -185,6 +238,6 @@ export default () => {
   return (
     <HostnameContainer>
       {hostname => <Popup hostname={hostname} />}
-    </HostnameContainer>  
+    </HostnameContainer>
   )
 }

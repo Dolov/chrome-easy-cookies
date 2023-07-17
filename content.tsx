@@ -9,7 +9,17 @@ const Content: React.FC<contentProps> = props => {
 
   React.useEffect(() => {
     chrome.runtime.onMessage.addListener(function(request, sender, sendResponse) {
-      if (request.type === 'COOKIES') {
+      const { type, data } = request
+      if (type === 'GET_ALL') {
+        sendResponse(Cookies.get())
+      }
+      if (type === 'DELETE') {
+        Cookies.remove(data)
+        sendResponse(Cookies.get())
+      }
+      if (type === 'CREATE') {
+        const { name, value } = data
+        Cookies.set(name, value)
         sendResponse(Cookies.get())
       }
     });
