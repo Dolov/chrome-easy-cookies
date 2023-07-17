@@ -196,8 +196,8 @@ const Popup = props => {
           <div className="list">
             <ShowAll visible={visible} cookies={cookies} />
             {Object.keys(storageData).map(name => {
-              const value = cookies[name]
-              const list = storageData[name].list || []
+              const value = cookies?.[name]
+              const list = storageData?.[name]?.list || []
               return (
                 <div key={name} style={{ marginBottom: 16 }}>
                   <Divider orientation="left" orientationMargin="0">
