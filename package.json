@@ -1,7 +1,7 @@
 {
   "name": "easy-cookies",
   "displayName": "easy-cookies",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Manage Page Cookies",
   "author": "shisongyan",
   "scripts": {
@@ -39,9 +39,6 @@
         "description": "触发快捷键事件"
       }
     },
-    "permissions": ["tabs", "storage", "cookies"],
-    "host_permissions": [
-      "https://*/*"
-    ]
+    "permissions": ["tabs", "storage", "cookies"]
   }
 }

@@ -161,14 +161,22 @@ const Popup = props => {
 
   /** 切换 cookie */
   const handleCookieValueChange = async (cookieName: string, nextValue: string) => {
-    const cookies = await sendMessage({
-      type: "CREATE",
-      data: {
-        name: cookieName,
-        value: nextValue,
-      }
-    })
-    setCookies(cookies)
+    let nextCookies = cookies
+    if (cookies[cookieName] === nextValue) {
+      nextCookies = await sendMessage({
+        type: "DELETE",
+        data: cookieName
+      })
+    } else {
+      nextCookies = await sendMessage({
+        type: "CREATE",
+        data: {
+          name: cookieName,
+          value: nextValue,
+        }
+      })
+    }
+    setCookies(nextCookies)
   }
 
   const noData = Object.keys(storageData).length === 0
